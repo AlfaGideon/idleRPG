@@ -87,9 +87,66 @@ export function normalise(raw: unknown): GameState {
   return s;
 }
 
+/* ------------------------------------------------------------------ storage
+ * A regular PWA has localStorage. The standalone single-file build can be
+ * opened from file://, where Chrome/Android treats the origin as opaque and
+ * localStorage throws. Fall back to window.name, then to the URL fragment,
+ * then to an in-memory value so the APK / offline HTML still keeps progress.
+ * -------------------------------------------------------------------------- */
+const NAME_PREFIX = 'CKS1:';
+const HASH_PREFIX = '#save=';
+let memorySave: string | null = null;
+
+/** Injected by the native Android WebView wrapper via addJavascriptInterface. */
+interface NativeSave { load(): string; save(value: string): void; clear(): void; }
+function nativeStorage(): NativeSave | null {
+  try {
+    const n = (globalThis as unknown as { CKStorage?: NativeSave }).CKStorage;
+    return n && typeof n.load === 'function' ? n : null;
+  } catch { return null; }
+}
+
+function readRaw(): string | null {
+  const native = nativeStorage();
+  if (native) {
+    try { const value = native.load(); if (value) return value; } catch { /* fall through */ }
+  }
+  try {
+    const value = localStorage.getItem(KEY);
+    if (value !== null) return value;
+  } catch { /* opaque origin */ }
+  try {
+    if (typeof window !== 'undefined' && window.name.startsWith(NAME_PREFIX)) {
+      return window.name.slice(NAME_PREFIX.length);
+    }
+  } catch { /* ignore */ }
+  try {
+    if (typeof location !== 'undefined' && location.hash.startsWith(HASH_PREFIX)) {
+      return decodeURIComponent(location.hash.slice(HASH_PREFIX.length));
+    }
+  } catch { /* ignore */ }
+  return memorySave;
+}
+
+function writeRaw(raw: string): void {
+  memorySave = raw;
+  const native = nativeStorage();
+  if (native) {
+    try { native.save(raw); return; } catch { /* fall through to web storage */ }
+  }
+  let stored = false;
+  try { localStorage.setItem(KEY, raw); stored = true; } catch { /* opaque origin */ }
+  if (!stored) {
+    try { window.name = NAME_PREFIX + raw; } catch { /* ignore */ }
+    try {
+      history.replaceState(null, '', HASH_PREFIX + encodeURIComponent(raw));
+    } catch { /* file:// may forbid history API */ }
+  }
+}
+
 export function loadState(): GameState {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = readRaw();
     if (!raw) return createState();
     return normalise(JSON.parse(raw));
   } catch {
@@ -98,10 +155,14 @@ export function loadState(): GameState {
 }
 
 export function saveState(s: GameState): void {
-  try {
-    s.lastSeen = Date.now();
-    localStorage.setItem(KEY, JSON.stringify(s));
-  } catch { /* storage unavailable — game still playable */ }
+  s.lastSeen = Date.now();
+  try { writeRaw(JSON.stringify(s)); } catch { /* storage unavailable — game still playable */ }
+}
+
+/** Exposed for the settings screen: true when localStorage is unavailable. */
+export function isFallbackStorage(): boolean {
+  try { localStorage.setItem('__ck_test__', '1'); localStorage.removeItem('__ck_test__'); return false; }
+  catch { return true; }
 }
 
 export function exportSave(s: GameState): string {
@@ -118,5 +179,9 @@ export function importSave(text: string): GameState | null {
 }
 
 export function wipeSave(): void {
+  memorySave = null;
+  try { nativeStorage()?.clear(); } catch { /* ignore */ }
   try { localStorage.removeItem(KEY); } catch { /* ignore */ }
+  try { window.name = ''; } catch { /* ignore */ }
+  try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignore */ }
 }

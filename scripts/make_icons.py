@@ -200,3 +200,13 @@ for name, size, maskable in [("icon-192.png", 192, False),
                              ("icon-maskable.png", 512, True)]:
     write_png(os.path.join(OUT, name), size, render(size, maskable))
     print("wrote", name)
+
+# Android launcher icons (mipmap densities).
+RES = os.path.join(os.path.dirname(__file__), "..", "android", "app", "src", "main", "res")
+for folder, size in [("mipmap-mdpi", 48), ("mipmap-hdpi", 72),
+                     ("mipmap-xhdpi", 96), ("mipmap-xxhdpi", 144),
+                     ("mipmap-xxxhdpi", 192)]:
+    path = os.path.join(RES, folder, "ic_launcher.png")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    write_png(path, size, render(size, False))
+    print("wrote", os.path.relpath(path, os.path.join(os.path.dirname(__file__), "..")))

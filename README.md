@@ -10,6 +10,36 @@
 
 ---
 
+## 📱 Запуск на телефоне — начните здесь
+
+**Готовый файл для телефона: [`mobile/Корона_и_Клинок.html`](mobile/Корона_и_Клинок.html).**
+Это вся игра в одном файле (710 КБ): JS, CSS, шрифты и иконки внутри.
+Скопируйте его на телефон и откройте в Chrome — интернет не нужен.
+
+> Если вы открываете `index.html` из корня и видите пустую страницу — это
+> исходник для сборщика Vite, а не игра. Нужны `mobile/`, `dist/` или APK.
+
+| Нужно | Куда идти |
+| --- | --- |
+| Просто поиграть офлайн | [MOBILE_INSTALL.md](MOBILE_INSTALL.md), вариант 1 |
+| Иконка на главном экране, fullscreen PWA | [MOBILE_INSTALL.md](MOBILE_INSTALL.md), вариант 2 |
+| **Настоящий APK** | [MOBILE_INSTALL.md](MOBILE_INSTALL.md), вариант 3 и [`android/`](android/) |
+| Собрать APK автоматически | [`docs/github-actions-example.yml`](docs/github-actions-example.yml) |
+
+Коротко про APK: проекта [`android/`](android/) — минимальная нативная обёртка на
+`WebView` без зависимостей. Соберите его:
+`bash android/build-apk.sh` (Termux на телефоне / Linux с Android SDK),
+откройте папку `android/` в Android Studio, либо скопируйте
+`docs/github-actions-example.yml` в `.github/workflows/build.yml` — и GitHub Actions
+положит подписанный APK в Releases. Готовый `.apk` не лежит в Git: в среде
+сборки нет Android SDK/JDK, а токен GitHub App не имеет права `workflows`.
+
+```bash
+npm run build:mobile   # пересобрать mobile/ и android/app/src/main/assets/index.html
+```
+
+---
+
 ## Что внутри
 
 - **Бой.** Касайтесь врага, чтобы бить. Криты, всплывающий урон, искры, монеты, тряска экрана. Каждые 10 волн — босс с таймером 30 секунд.
@@ -45,6 +75,8 @@ npm run build        # tsc --noEmit && vite build  →  dist/
 npm run preview      # проверить production-сборку: http://localhost:4173
 npm run typecheck    # только проверка типов
 npm run icons        # пересобрать SVG-иконки эмодзи (после правки исходников)
+npm run build:mobile # один автономный HTML + ассет для APK
+npm run build:apk    # собрать и подписать APK (нужен Android SDK или Termux)
 ```
 
 `dist/` — статическая папка: заливайте её на любой хостинг (GitHub Pages, Netlify, Cloudflare Pages, обычный nginx). Пути в сборке относительные (`base: './'`), поэтому игра работает и из подпапки.

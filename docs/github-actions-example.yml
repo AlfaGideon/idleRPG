@@ -1,4 +1,9 @@
-name: Build & deploy
+name: Build web, APK & deploy
+
+# ШАБЛОН. Скопируйте в .github/workflows/build.yml:
+#   mkdir -p .github/workflows && cp docs/github-actions-example.yml .github/workflows/build.yml
+# После push в разделе Actions появится артефакт corona-i-klinok-apk,
+# а в Releases — постоянная ссылка на готовый APK для скачивания на телефон.
 
 on:
   push:
@@ -7,16 +12,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write        # для публикации APK в Releases
   pages: write
   id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  web:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +42,44 @@ jobs:
         with:
           path: dist
 
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build the single-file game
+        run: npm ci && npm run build:mobile
+      - name: Build and sign the APK
+        run: bash android/build-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corona-i-klinok-apk
+          path: download/corona-i-klinok.apk
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish APK in Releases
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTE="Автоматическая сборка APK из коммита ${GITHUB_SHA::7}. Скачайте corona-i-klinok.apk на телефон, откройте в «Файлах» и разрешите установку из неизвестных источников."
+          if gh release view apk-latest >/dev/null 2>&1; then
+            gh release upload apk-latest download/corona-i-klinok.apk --clobber
+          else
+            gh release create apk-latest download/corona-i-klinok.apk \
+              --title "Корона и Клинок — APK" --notes "$NOTE"
+          fi
+
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: [web]
     runs-on: ubuntu-latest
     environment:
       name: github-pages
