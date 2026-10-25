@@ -27,7 +27,7 @@ info "Ассет игры: $(du -h "$APP/src/main/assets/index.html" | cut -f1)"
 IS_TERMUX=0
 if [ -n "${TERMUX_VERSION:-}" ] || [[ "${PREFIX:-}" == *"com.termux"* ]]; then IS_TERMUX=1; fi
 
-need_tools=(aapt2 zipalign apksigner javac zip)
+need_tools=(aapt2 apksigner javac zip)
 missing=0
 for t in "${need_tools[@]}"; do command -v "$t" >/dev/null 2>&1 || missing=1; done
 if ! command -v d8 >/dev/null 2>&1 && ! command -v dx >/dev/null 2>&1; then missing=1; fi
@@ -59,7 +59,7 @@ APKSIGNER="$(find_sdk_tool apksigner || true)"
 D8="$(find_sdk_tool d8 || true)"
 DX="$(find_sdk_tool dx || true)"
 
-for pair in "AAPT2:$AAPT2" "ZIPALIGN:$ZIPALIGN" "APKSIGNER:$APKSIGNER"; do
+for pair in "AAPT2:$AAPT2" "APKSIGNER:$APKSIGNER"; do
   [ -n "${pair#*:}" ] || die "Не найден ${pair%%:*}. В Termux: pkg install openjdk-17 aapt2 d8 apksigner zipalign zip"
 done
 [ -n "$D8" ] || [ -n "$DX" ] || die "Не найден d8/dx. В Termux: pkg install d8"
@@ -124,7 +124,12 @@ fi
 
 # ---------------------------------------------------------------- 5. align + sign
 log "Выравниваю и подписываю APK"
-"$ZIPALIGN" -f 4 "$BUILD/base.apk" "$BUILD/aligned.apk"
+if [ -n "$ZIPALIGN" ] && [ -x "$ZIPALIGN" ]; then
+  "$ZIPALIGN" -f 4 "$BUILD/base.apk" "$BUILD/aligned.apk"
+else
+  info "Нативного zipalign нет — использую scripts/zipalign.py"
+  python3 "$ROOT/scripts/zipalign.py" "$BUILD/base.apk" "$BUILD/aligned.apk"
+fi
 
 KS="$TOOLZ/debug.keystore"
 if [ ! -f "$KS" ] && command -v keytool >/dev/null 2>&1; then

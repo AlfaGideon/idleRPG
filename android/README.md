@@ -65,6 +65,21 @@ bash android/build-apk.sh
   Activity, поэтому игровой цикл не прерывается.
 - **Иконки.** Генерируются скриптом `scripts/make_icons.py` (без Pillow).
 
+### Ключ подписи
+
+`toolz/debug.keystore` лежит в репозитории (пароль `android`, алиас
+`androiddebugkey`), поэтому пересборки из Termux, CI и Android Studio дают
+**одинаковую подпись** и ставятся поверх уже установленной версии. Это debug-ключ:
+для публикации в магазине создайте отдельный release-ключ и не коммитьте его.
+
+### Как собран APK из этого репозитория
+
+Готовый файл `download/corona-i-klinok.apk` получен тем же конвейером, но с
+портативным набором инструментов (они не входят в APK): `aapt2` из npm-пакета
+`aaptjs3`, `android.jar`/`d8.jar`/`apksigner.jar`/`ecj.jar` из `@drxiaozhi/minapk`,
+JRE из PyPI-пакета `jdk4py`, выравнивание — `scripts/zipalign.py`.
+Проверено: `apksigner verify` (v1+v2+v3), `aapt2 dump badging`, `unzip -t`.
+
 ## Изменение имени/пакета
 
 Если хотите свой `applicationId`, замените `ru.idlerpg.corona` в

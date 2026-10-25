@@ -5,6 +5,8 @@ dist/
 .vite/
 mobile-build/
 android/build/
-android/toolz/
+android/toolz/*
 android/*.apk
 *.keystore
+!android/toolz/debug.keystore
+*.idsig

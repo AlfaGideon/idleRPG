@@ -25,3 +25,16 @@ from Google Fonts or any other external host at runtime.
 
 Vite, TypeScript and Fontsource are development/runtime dependencies licensed
 under MIT (see each package's LICENSE file in `node_modules`).
+
+## APK build toolchain (not shipped)
+
+`download/corona-i-klinok.apk` was assembled locally with these third-party
+tools; none of their code is included in the APK itself:
+
+- `aapt2` from the npm package `aaptjs3` (Android SDK Build Tools, Apache-2.0).
+- `android.jar`, `d8.jar`, `apksigner.jar` and `ecj.jar` from the npm package
+  `@drxiaozhi/minapk` (Android SDK / R8 / Eclipse JDT, Apache-2.0 / EPL).
+- A Temurin JRE from the PyPI package `jdk4py` (GPLv2 + Classpath Exception).
+
+They are used only at build time. The APK contains just the game's own code,
+Twemoji SVGs and the two OFL fonts listed above.
