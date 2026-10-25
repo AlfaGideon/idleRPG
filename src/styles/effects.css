@@ -1,0 +1,103 @@
+.fx-damage { position: absolute; inset: 0; pointer-events: none; z-index: 20; overflow: hidden; }
+
+/* --------------------------------------------------------- floating numbers */
+
+.dmg-number {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 25px;
+  color: #ffe9b0;
+  text-shadow: 0 2px 0 #5b3210, 0 3px 8px #000, 0 0 12px rgba(255,190,80,.6);
+  white-space: nowrap;
+  animation: dmg-float .85s cubic-bezier(.15,.7,.3,1) forwards;
+  will-change: transform, opacity;
+}
+.dmg-number.crit {
+  font-size: 33px;
+  color: #fff0a8;
+  text-shadow: 0 2px 0 #a13a16, 0 4px 12px #000, 0 0 20px rgba(255,120,40,.9);
+  animation-duration: 1s;
+}
+@keyframes dmg-float {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.5) rotate(-6deg); }
+  18% { opacity: 1; transform: translate(-50%, -85%) scale(1.18) rotate(2deg); }
+  35% { transform: translate(-50%, -100%) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, -215%) scale(.85); }
+}
+
+/* --------------------------------------------------------------- sword slash */
+
+.slash {
+  position: absolute;
+  width: 92px; height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, #fff8dc 40%, #ffd166 70%, transparent);
+  box-shadow: 0 0 12px #fff2b0, 0 0 26px rgba(255,190,80,.75);
+  transform-origin: center;
+  animation: slash-go .32s ease-out forwards;
+}
+.slash.crit { height: 8px; background: linear-gradient(90deg, transparent, #fff 40%, #ff9a3c 75%, transparent); box-shadow: 0 0 18px #ffb347, 0 0 34px rgba(255,110,30,.9); }
+@keyframes slash-go {
+  0% { opacity: 0; transform: translate(-50%,-50%) rotate(var(--slash-rot, 0deg)) scaleX(.2); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-50%) rotate(calc(var(--slash-rot, 0deg) + 28deg)) scaleX(1.5); }
+}
+
+/* ---------------------------------------------------------------- coin burst */
+
+.coin-fly {
+  position: absolute;
+  font-size: 19px;
+  filter: drop-shadow(0 2px 4px #000);
+  animation: coin-go .9s ease-out forwards;
+}
+@keyframes coin-go {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.4); }
+  18% { opacity: 1; transform: translate(-50%,-70%) scale(1.15); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.7) rotate(220deg); }
+}
+
+/* ------------------------------------------------------------- enemy states */
+
+.enemy-art.hit { animation: enemy-hit .16s ease-out; filter: brightness(1.8) saturate(.5) drop-shadow(0 10px 12px rgba(0,0,0,.55)); }
+@keyframes enemy-hit {
+  0% { transform: translateX(0) scale(1); }
+  30% { transform: translateX(-9px) scale(.96) rotate(-3deg); }
+  60% { transform: translateX(7px) scale(1.02) rotate(2deg); }
+  100% { transform: translateX(0) scale(1); }
+}
+.dying-svg { animation: svg-die .38s ease-in forwards; pointer-events: none; }
+@keyframes svg-die {
+  0% { opacity: 1; transform: scale(1); }
+  35% { opacity: 1; transform: scale(1.1) rotate(4deg); filter: brightness(1.9); }
+  100% { opacity: 0; transform: scale(.35) rotate(-14deg) translateY(22px); }
+}
+.entering-svg { animation: svg-enter .32s ease-out; }
+@keyframes svg-enter {
+  0% { opacity: 0; transform: scale(.75) translateY(10px); }
+  100% { opacity: 1; transform: none; }
+}
+
+.arena.shake { animation: arena-shake .28s ease-out; }
+@keyframes arena-shake {
+  0%,100% { transform: translate(0,0); }
+  20% { transform: translate(-6px, 3px); }
+  40% { transform: translate(5px, -4px); }
+  60% { transform: translate(-4px, 2px); }
+  80% { transform: translate(3px, -2px); }
+}
+.arena.fury-active::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 70%, rgba(255,110,30,.3), transparent 65%);
+  box-shadow: inset 0 0 40px rgba(255,120,30,.45);
+  animation: fury-flash 1.2s ease-out forwards;
+}
+@keyframes fury-flash { from { opacity: 1; } to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dmg-number, .slash, .coin-fly { animation-duration: .3s; }
+  .enemy-art { animation: none; }
+}
