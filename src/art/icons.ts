@@ -47,12 +47,23 @@ export const EMOJI: Record<string, string> = {
 
 const EMOJI_RE = new RegExp('1️⃣|2️⃣|3️⃣|4️⃣|5️⃣|🌀|🌟|🌩|🎯|🏆|🏰|👊|👑|💀|💡|💫|💰|📖|📤|📥|📯|🔊|🔥|🔨|🗑|🗡|🚩|🛡|🦴|🦸|🩸|🪙|⏳|☠|♻|⚔|⚙|⚠|⛺|✔|✨|❔', 'g');
 
+type InlineMap = Record<string, string>;
+
+/**
+ * The standalone single-file build injects globalThis.__EMOJI_INLINE__ (file
+ * name -> data URI) so no external SVG requests are needed on file:// URLs.
+ */
+function iconUrl(file: string): string {
+  const inline = (globalThis as unknown as { __EMOJI_INLINE__?: InlineMap }).__EMOJI_INLINE__;
+  return inline && inline[file] ? inline[file] : './icons/emoji/' + file + '.svg';
+}
+
 /** Inline an <img> for every known emoji inside an HTML string. */
 export function emojify(html: string): string {
   return html.replace(EMOJI_RE, (m) => {
     const file = EMOJI[m];
     return file
-      ? `<img class="emoji" src="./icons/emoji/${file}.svg" alt="${m}" draggable="false">`
+      ? '<img class="emoji" src="' + iconUrl(file) + '" alt="' + m + '" draggable="false">'
       : m;
   });
 }
@@ -61,6 +72,6 @@ export function emojify(html: string): string {
 export function icon(char: string, className = ''): string {
   const file = EMOJI[char] ?? EMOJI[char.replace(/\uFE0F+$/, '')];
   return file
-    ? `<img class="emoji ${className}" src="./icons/emoji/${file}.svg" alt="${char}" draggable="false">`
+    ? '<img class="emoji ' + className + '" src="' + iconUrl(file) + '" alt="' + char + '" draggable="false">'
     : char;
 }

@@ -3,3 +3,10 @@ dist/
 .DS_Store
 *.local
 .vite/
+mobile-build/
+android/build/
+android/toolz/*
+android/*.apk
+*.keystore
+!android/toolz/debug.keystore
+*.idsig

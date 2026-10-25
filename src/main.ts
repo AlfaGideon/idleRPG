@@ -177,7 +177,8 @@ window.addEventListener('beforeunload', () => game.save());
 
 /* --------------------------------------------------------------------- PWA */
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+const securePage = location.protocol === 'https:' || location.protocol === 'http:';
+if ('serviceWorker' in navigator && import.meta.env.PROD && securePage) {
   window.addEventListener('load', () => {
     const url = new URL('./sw.js', location.href).href;
     navigator.serviceWorker.register(url).catch(() => { /* offline mode is optional */ });

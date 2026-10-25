@@ -10,6 +10,41 @@
 
 ---
 
+## 📱 Запуск на телефоне — начните здесь
+
+**Два готовых файла — просто скачайте на телефон:**
+
+1. 📦 **[`download/corona-i-klinok.apk`](download/corona-i-klinok.apk)** (493 КБ) —
+   настоящее Android-приложение. Откройте файл в «Файлах», разрешите установку
+   из неизвестных источников → иконка «Корона и Клинок» появится среди приложений.
+2. 🌐 **[`mobile/Корона_и_Клинок.html`](mobile/Корона_и_Клинок.html)** (710 КБ) —
+   вся игра в одном файле: JS, CSS, шрифты и иконки внутри. Откройте в Chrome
+   через «Файлы». Интернет не нужен.
+
+> Если вы открываете `index.html` из корня и видите пустую страницу — это
+> исходник для сборщика Vite, а не игра. Нужны `mobile/`, `dist/` или APK.
+
+| Нужно | Куда идти |
+| --- | --- |
+| **Установить APK** | [download/corona-i-klinok.apk](download/corona-i-klinok.apk) → [инструкция](MOBILE_INSTALL.md#вариант-3--настоящий-apk) |
+| Просто поиграть офлайн без установки | [MOBILE_INSTALL.md](MOBILE_INSTALL.md), вариант 1 |
+| Иконка на главном экране, fullscreen PWA | [MOBILE_INSTALL.md](MOBILE_INSTALL.md), вариант 2 |
+| Пересобрать APK | [`android/README.md`](android/README.md) и [`docs/github-actions-example.yml`](docs/github-actions-example.yml) |
+
+APK собран из [`android/`](android/) — минимальная нативная обёртка на `WebView`
+без зависимостей: игра лежит в `assets/`, прогресс пишется в `SharedPreferences`,
+интернет не используется. Подпись проверена схемами v1/v2/v3, `minSdk 21`,
+`targetSdk 34`, `resources.arsc` выровнен. Пересобрать можно командой
+`bash android/build-apk.sh` (Termux / Linux с Android SDK / CI), через Android
+Studio или автоматически в GitHub Actions.
+
+```bash
+npm run build:mobile   # пересобрать mobile/ и android/app/src/main/assets/index.html
+npm run build:apk      # пересобрать download/corona-i-klinok.apk
+```
+
+---
+
 ## Что внутри
 
 - **Бой.** Касайтесь врага, чтобы бить. Криты, всплывающий урон, искры, монеты, тряска экрана. Каждые 10 волн — босс с таймером 30 секунд.
@@ -45,6 +80,8 @@ npm run build        # tsc --noEmit && vite build  →  dist/
 npm run preview      # проверить production-сборку: http://localhost:4173
 npm run typecheck    # только проверка типов
 npm run icons        # пересобрать SVG-иконки эмодзи (после правки исходников)
+npm run build:mobile # один автономный HTML + ассет для APK
+npm run build:apk    # собрать и подписать APK (нужен Android SDK или Termux)
 ```
 
 `dist/` — статическая папка: заливайте её на любой хостинг (GitHub Pages, Netlify, Cloudflare Pages, обычный nginx). Пути в сборке относительные (`base: './'`), поэтому игра работает и из подпапки.

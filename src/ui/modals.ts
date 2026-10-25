@@ -1,6 +1,6 @@
 import { sfx } from '../game/audio';
 import { game } from '../game/engine';
-import { exportSave, importSave, wipeSave } from '../game/state';
+import { exportSave, importSave, isFallbackStorage, wipeSave } from '../game/state';
 import { escapeHtml, q, refreshAll, showModal, toast, confirmModal } from './common';
 import { invalidateBattleArt } from './battle';
 
@@ -78,6 +78,16 @@ function openImport(): void {
   });
 }
 
+function storageLine(): string {
+  if ((globalThis as unknown as { CKStorage?: unknown }).CKStorage) {
+    return 'Хранилище: память приложения (APK)';
+  }
+  if (isFallbackStorage()) {
+    return 'Хранилище: резервное (используйте экспорт сохранения)';
+  }
+  return 'Хранилище: браузерное (localStorage)';
+}
+
 export function openSettings(): void {
   const s = game.state;
   showModal({
@@ -91,7 +101,7 @@ export function openSettings(): void {
         <button class="setting-row" id="set-import"><span>📥 Импорт сохранения</span><b>›</b></button>
         <button class="setting-row danger" id="set-reset"><span>🗑️ Сбросить прогресс</span><b>›</b></button>
       </div>
-      <p class="settings-foot">Корона и Клинок · v1.0.0<br>Автосохранение каждые 10 секунд</p>`,
+      <p class="settings-foot">Корона и Клинок · v1.0.0<br>Автосохранение каждые 10 секунд<br>${storageLine()}</p>`,
     actions: [{ label: 'Закрыть', kind: 'primary' }],
     onOpen: (root) => {
       q('#set-sound', root).addEventListener('click', () => {

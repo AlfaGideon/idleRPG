@@ -9,12 +9,15 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/prepare-emoji.mjs"
+    "icons": "node scripts/prepare-emoji.mjs",
+    "build:mobile": "vite build --config vite.mobile.config.ts",
+    "build:apk": "bash android/build-apk.sh"
   },
   "devDependencies": {
     "@twemoji/svg": "^15.0.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.7"
+    "vite": "^7.3.7",
+    "vite-plugin-singlefile": "^2.3.4"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.1.0",
