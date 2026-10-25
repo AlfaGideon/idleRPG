@@ -58,6 +58,12 @@ bash android/build-apk.sh
 - **Сохранение прогресса.** `file://` в WebView не всегда даёт `localStorage`,
   поэтому `MainActivity` регистрирует JS-мост `CKStorage`, который пишет сейв в
   `SharedPreferences`. `src/game/state.ts` использует его в первую очередь.
+- **OTA‑обновления.** Мост также содержит `saveBundle(html, version)` —
+  сохраняет свежий бандл в `filesDir/ota/game.html`, `bundleVersion()`,
+  `applyUpdate()` (перезагружает WebView) и `clearBundle()` (откат к ассету).
+  При старте `loadGame()` грузит загруженный бандл вместо `assets/index.html`.
+  `setAllowUniversalAccessFromFileURLs(true)` разрешает странице `file://`
+  обращаться к GitHub за манифестом обновлений. См. [`docs/OTA.md`](../docs/OTA.md).
 - **Офлайн.** Ни одного сетевого запроса: шрифты, стили, скрипты и иконки
   встроены в `assets/index.html`. Разрешение `INTERNET` добавлено только на
   случай WebView-сборок, требующих его даже для `file://`.

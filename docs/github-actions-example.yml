@@ -54,14 +54,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Build the single-file game
-        run: npm ci && npm run build:mobile
+      - name: Build the single-file game and OTA bundle
+        run: npm ci && node scripts/publish-ota.mjs
       - name: Build and sign the APK
         run: bash android/build-apk.sh
       - uses: actions/upload-artifact@v4
         with:
           name: corona-i-klinok-apk
           path: download/corona-i-klinok.apk
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corona-i-klinok-ota
+          path: |
+            ota/game.html
+            ota/manifest.json
           if-no-files-found: error
           retention-days: 90
       - name: Publish APK in Releases
@@ -76,6 +84,7 @@ jobs:
             gh release create apk-latest download/corona-i-klinok.apk \
               --title "Корона и Клинок — APK" --notes "$NOTE"
           fi
+          gh release upload apk-latest ota/game.html ota/manifest.json --clobber || true
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

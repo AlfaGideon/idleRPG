@@ -6,10 +6,15 @@ import './styles/battle.css';
 import './styles/panels.css';
 import './styles/effects.css';
 
+import { mountCrest } from './art/live';
 import { emojify } from './art/icons';
 import { sfx } from './game/audio';
 import { game } from './game/engine';
-import { createAchievementsScreen, createForgeScreen, createGloryScreen, createHeroesScreen } from './ui/panels';
+import { APP_VERSION, updater } from './game/updater';
+import {
+  createAchievementsScreen, createForgeScreen, createGloryScreen,
+  createHeroesScreen, createPlayerScreen,
+} from './ui/panels';
 import { createBattleScreen, invalidateBattleArt, onGameEvent, showOfflineModal } from './ui/battle';
 import { closeModal, initUI, q, refreshAll, registerScreen, setTab, toast } from './ui/common';
 import { openFirstRun, openHelp, openSettings } from './ui/modals';
@@ -19,9 +24,7 @@ const SHELL = `
   <header class="topbar">
     <div class="topbar-main">
       <div class="brand">
-        <div class="brand-crest">
-          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 58 14v22c0 14-12 22-26 27C18 58 6 50 6 36V14z" fill="#c99a3d"/><path d="M32 9 53 17v19c0 11-9 18-21 23-12-5-21-12-21-23V17z" fill="#8d2f36"/><path d="M17 24 15 12l9 6 8-9 8 9 9-6-2 12z" fill="#f0cf72"/><circle cx="32" cy="37" r="4" fill="#5bc0eb"/></svg>
-        </div>
+        <canvas class="brand-crest" id="brand-crest" width="48" height="48" aria-label="Логотип"></canvas>
         <div class="brand-copy">
           <span class="brand-title">Корона и Клинок</span>
           <span class="brand-sub latin">IDLE RPG · MEDIEVAL</span>
@@ -40,8 +43,16 @@ const SHELL = `
     </div>
   </header>
 
+  <div class="update-banner" id="update-banner" hidden>
+    <div class="update-icon">⬆️</div>
+    <div class="update-copy"><b id="update-title">Обновление</b><span id="update-notes"></span></div>
+    <button class="update-apply" id="update-apply">Обновить</button>
+    <button class="update-later" id="update-later" aria-label="Позже">×</button>
+  </div>
+
   <main id="screens">
     <section class="screen" id="screen-battle"></section>
+    <section class="screen" id="screen-player" hidden></section>
     <section class="screen" id="screen-heroes" hidden></section>
     <section class="screen" id="screen-forge" hidden></section>
     <section class="screen" id="screen-glory" hidden></section>
@@ -50,7 +61,8 @@ const SHELL = `
 
   <nav class="tabbar" role="tablist" aria-label="Разделы игры">
     <button class="tab-btn active" data-tab="battle" role="tab"><span class="tab-icon">⚔️</span><span class="tab-label">Бой</span><i class="badge dot" id="fury-badge" hidden></i></button>
-    <button class="tab-btn" data-tab="heroes" role="tab"><span class="tab-icon">🦸</span><span class="tab-label">Герои</span></button>
+    <button class="tab-btn" data-tab="player" role="tab"><span class="tab-icon">🛡️</span><span class="tab-label">Герой</span><i class="badge dot" id="loot-badge" hidden></i></button>
+    <button class="tab-btn" data-tab="heroes" role="tab"><span class="tab-icon">🦸</span><span class="tab-label">Дружина</span></button>
     <button class="tab-btn" data-tab="forge" role="tab"><span class="tab-icon">🔨</span><span class="tab-label">Кузница</span></button>
     <button class="tab-btn" data-tab="glory" role="tab"><span class="tab-icon">👑</span><span class="tab-label">Слава</span><i class="badge dot" id="glory-badge" hidden></i></button>
     <button class="tab-btn" data-tab="achievements" role="tab"><span class="tab-icon">🏆</span><span class="tab-label">Достиж.</span><i class="badge" id="tab-badge" hidden>0</i></button>
@@ -65,6 +77,7 @@ if (!root) throw new Error('#app not found');
 root.innerHTML = emojify(SHELL);
 initUI();
 sfx.enabled = game.state.sound;
+mountCrest(q<HTMLCanvasElement>('#brand-crest'));
 
 /* ------------------------------------------------------------------ screens */
 
@@ -76,6 +89,7 @@ function mount(id: string, factory: () => { el: HTMLElement; refresh(): void; on
 }
 
 mount('battle', createBattleScreen);
+mount('player', createPlayerScreen);
 mount('heroes', createHeroesScreen);
 mount('forge', createForgeScreen);
 mount('glory', createGloryScreen);
@@ -83,7 +97,7 @@ mount('achievements', createAchievementsScreen);
 
 /* ------------------------------------------------------------------ offline */
 
-const firstRun = game.state.stats.taps === 0 && game.state.stats.kills === 0 && game.state.gold === 0;
+const firstRun = game.state.stats.kills === 0 && game.state.gold === 0 && game.state.stats.playTime < 5;
 const elapsed = Math.max(0, (Date.now() - game.state.lastSeen) / 1000);
 const offline = firstRun ? null : game.applyOffline(elapsed);
 if (firstRun) game.spawnEnemy();
@@ -108,10 +122,12 @@ game.on((e) => {
   switch (e.type) {
     case 'hit': sfx.play(e.crit ? 'crit' : 'tap'); break;
     case 'kill':
-      if (now - lastKillSound > 180) { lastKillSound = now; sfx.play('kill'); sfx.play('coin'); }
+      if (now - lastKillSound > 220) { lastKillSound = now; sfx.play('kill'); sfx.play('coin'); }
       break;
     case 'buy': sfx.play('buy'); break;
     case 'skill': sfx.play('skill'); break;
+    case 'heroDown': sfx.play('boss'); break;
+    case 'loot': sfx.play('prestige'); break;
     case 'prestige':
       sfx.play('prestige');
       invalidateBattleArt();
@@ -138,9 +154,45 @@ q('#btn-help').addEventListener('click', openHelp);
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape') closeModal();
-  const map: Record<string, string> = { '1': 'battle', '2': 'heroes', '3': 'forge', '4': 'glory', '5': 'achievements' };
+  const map: Record<string, string> = {
+    '1': 'battle', '2': 'player', '3': 'heroes',
+    '4': 'forge', '5': 'glory', '6': 'achievements',
+  };
   if (map[ev.key] && !ev.ctrlKey && !ev.metaKey && !ev.altKey) setTab(map[ev.key]);
 });
+
+/* ------------------------------------------------------------ live indicators */
+
+function updateBadges(): void {
+  const lootBadge = q('#loot-badge');
+  if (lootBadge) lootBadge.hidden = game.state.inventory.length === 0;
+}
+
+/* -------------------------------------------------------------- OTA banner */
+
+const banner = q('#update-banner');
+const bannerTitle = q('#update-title');
+const bannerNotes = q('#update-notes');
+const bannerApply = q<HTMLButtonElement>('#update-apply');
+
+updater.onChange((v) => {
+  const show = v.status === 'ready' || v.status === 'downloading' || v.status === 'checking';
+  banner.hidden = !show;
+  if (!show) return;
+  banner.classList.toggle('is-ready', v.status === 'ready');
+  bannerTitle.textContent = v.status === 'ready'
+    ? `Вышла версия ${v.version}` : v.status === 'downloading'
+      ? 'Загружаем обновление…' : 'Проверяем обновления…';
+  bannerNotes.textContent = v.notes || v.message;
+  bannerApply.textContent = v.status === 'ready' ? 'Перезапустить' : '…';
+  bannerApply.disabled = v.status !== 'ready';
+});
+bannerApply.addEventListener('click', () => { game.save(); updater.apply(); });
+q('#update-later').addEventListener('click', () => {
+  banner.hidden = true;
+  toast('Обновление применится при следующем запуске', 'info');
+});
+updater.start();
 
 /* ---------------------------------------------------------------- game loop */
 
@@ -152,7 +204,7 @@ function frame(now: number): void {
   const dt = (now - lastFrame) / 1000;
   lastFrame = now;
   if (!document.hidden) game.tick(dt);
-  if (now - lastRender >= 100) { lastRender = now; refreshAll(); }
+  if (now - lastRender >= 100) { lastRender = now; refreshAll(); updateBadges(); }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -185,7 +237,6 @@ if ('serviceWorker' in navigator && import.meta.env.PROD && securePage) {
   });
 }
 
-/* Prevent iOS double-tap zoom on game surfaces. */
 let lastTouch = 0;
 document.addEventListener('touchend', (ev) => {
   const now = Date.now();
@@ -193,5 +244,5 @@ document.addEventListener('touchend', (ev) => {
   lastTouch = now;
 }, { passive: false });
 
-/* Debug hook, handy in devtools. */
-(window as unknown as { idleRPG: typeof game }).idleRPG = game;
+(window as unknown as { idleRPG: typeof game; APP_VERSION: string }).idleRPG = game;
+(window as unknown as { idleRPG: typeof game; APP_VERSION: string }).APP_VERSION = APP_VERSION;
