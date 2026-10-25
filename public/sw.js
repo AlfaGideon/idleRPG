@@ -1,7 +1,10 @@
-/* Корона и Клинок — offline service worker.
-   Precaches the app shell, hashed JS/CSS, webfonts and emoji icons so the
-   game keeps working with no network at all. */
-const CACHE = 'corona-i-klinok-v3';
+/* Корона и Клинок — offline service worker + OTA shell support.
+ * Precaches the app shell, hashed JS/CSS, webfonts and emoji icons so the game
+ * keeps working with no network at all. An OTA bundle downloaded from GitHub
+ * is served for navigations instead of the shipped index.html. */
+const CACHE = 'corona-i-klinok-v4';
+const OTA_PREFIX = 'corona-ota-shell-';
+const OTA_KEY = '/__corona_ota_shell__';
 const CORE = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable.png',
@@ -37,6 +40,18 @@ async function collectUrls() {
   return [...urls];
 }
 
+async function otaShell() {
+  try {
+    const keys = (await caches.keys()).filter((k) => k.startsWith(OTA_PREFIX));
+    for (const key of keys) {
+      const cache = await caches.open(key);
+      const hit = await cache.match(OTA_KEY);
+      if (hit) return hit;
+    }
+  } catch (_) { /* no OTA bundle */ }
+  return null;
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -51,9 +66,20 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys
+        .filter((k) => k !== CACHE && !k.startsWith(OTA_PREFIX))
+        .map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_OTA') {
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k.startsWith(OTA_PREFIX)).map((k) => caches.delete(k)));
+    })());
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -62,19 +88,24 @@ self.addEventListener('fetch', (event) => {
 
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
+      (async () => {
+        const ota = await otaShell();
+        if (ota) return ota;
+        try {
+          const res = await fetch(req);
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put('./index.html', copy));
           return res;
-        })
-        .catch(() => caches.match('./index.html'))
+        } catch (_) {
+          return (await caches.match('./index.html', { ignoreVary: true })) || Response.error();
+        }
+      })()
     );
     return;
   }
 
-  // Cache-first: hashed build assets are immutable, and ignoreVary avoids
-  // misses caused by dev/preview servers sending `Vary: Origin`.
+  /* Cache-first: hashed build assets are immutable; ignoreVary avoids misses
+   * caused by dev/preview servers sending `Vary: Origin`. */
   event.respondWith(
     caches.match(req, { ignoreVary: true }).then((cached) => {
       if (cached) return cached;

@@ -1,7 +1,7 @@
 {
   "name": "idle-rpg-corona-i-klinok",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "Корона и Клинок — средневековая мобильная idle RPG (PWA)",
   "scripts": {
@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/prepare-emoji.mjs",
     "build:mobile": "vite build --config vite.mobile.config.ts",
-    "build:apk": "bash android/build-apk.sh"
+    "build:apk": "bash android/build-apk.sh",
+    "build:ota": "node scripts/publish-ota.mjs",
+    "release": "npm run build:ota"
   },
   "devDependencies": {
     "@twemoji/svg": "^15.0.0",

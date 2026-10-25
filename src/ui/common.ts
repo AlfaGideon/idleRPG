@@ -70,7 +70,7 @@ export function updateTopbar(): void {
   const wave = q('#res-wave');
   if (gold) gold.textContent = fmtHud(s.gold);
   if (glory) glory.textContent = fmtHud(s.glory);
-  if (dps) dps.textContent = fmtHud(game.heroDps());
+  if (dps) dps.textContent = fmtHud(game.totalDps());
   if (wave) wave.textContent = String(s.wave);
   const badge = q('#tab-badge');
   if (badge) {

@@ -38,3 +38,11 @@ tools; none of their code is included in the APK itself:
 
 They are used only at build time. The APK contains just the game's own code,
 Twemoji SVGs and the two OFL fonts listed above.
+
+## QA / asset tooling (not shipped)
+
+Screenshots were produced with `playwright-core` (Apache-2.0) and
+`@sparticuz/chromium` (MIT); JPEG conversion used `Pillow` (HPND).
+The game's creature art, backgrounds, monsters, characters and logo are drawn
+procedurally on a Canvas 2D context at runtime — no third-party image assets
+are embedded in the game bundle.
